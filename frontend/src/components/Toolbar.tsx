@@ -39,7 +39,7 @@ export function Toolbar() {
   const searchInputRef = useRef<HTMLInputElement>(null);
   const {
     searchReferences,
-    fetchReferences,
+    refreshReferences,
     exportAllToBibtex,
     exportSelectedToBibtex,
     saveBibtexToFile,
@@ -55,12 +55,12 @@ export function Toolbar() {
     }
     searchDebounceRef.current = setTimeout(() => {
       if (value.trim() === "") {
-        fetchReferences();
+        refreshReferences();
       } else {
         searchReferences(value);
       }
     }, 300);
-  }, [fetchReferences, searchReferences]);
+  }, [refreshReferences, searchReferences]);
 
   // Global keyboard shortcuts
   useEffect(() => {
@@ -73,7 +73,7 @@ export function Toolbar() {
         if (document.activeElement === searchInputRef.current) {
           searchInputRef.current?.blur();
           setSearchValue("");
-          fetchReferences();
+          refreshReferences();
         }
         return;
       }
@@ -103,7 +103,7 @@ export function Toolbar() {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [fetchReferences]);
+  }, [refreshReferences]);
 
   const handleExportAll = async () => {
     try {
