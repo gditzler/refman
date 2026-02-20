@@ -35,7 +35,7 @@ export function ImportBibtexModal({
   open,
   onOpenChange,
 }: ImportBibtexModalProps) {
-  const { fetchReferences } = useReferences();
+  const { refreshReferences } = useReferences();
   const [filePath, setFilePath] = useState("");
   const [duplicateStrategy, setDuplicateStrategy] =
     useState<DuplicateStrategy>("autoSuffix");
@@ -70,7 +70,7 @@ export function ImportBibtexModal({
       toast.success(
         `Imported ${result.imported} references${result.skipped > 0 ? `, skipped ${result.skipped} duplicates` : ""}`
       );
-      fetchReferences();
+      refreshReferences();
       onOpenChange(false);
       reset();
     } catch (err) {
