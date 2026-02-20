@@ -75,7 +75,7 @@ export function ReferenceForm({
   reference,
   initialData,
 }: ReferenceFormProps) {
-  const { createReference, editReference, fetchReferences, fetchTags, fetchFolders } = useReferences();
+  const { createReference, editReference, refreshReferences, fetchTags, fetchFolders } = useReferences();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showMore, setShowMore] = useState(false);
   const [formData, setFormData] = useState<CreateReferenceInput>(defaultFormData);
@@ -168,7 +168,7 @@ export function ReferenceForm({
         toast.success("Reference updated successfully");
       }
       onOpenChange(false);
-      fetchReferences();
+      refreshReferences();
       fetchTags();
       fetchFolders();
     } catch (error) {
