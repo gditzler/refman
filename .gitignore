@@ -1,3 +1,25 @@
-build/bin
-frontend/dist
-frontend/node_modules
+# Wails build output
+build/bin/
+build/darwin/
+build/windows/
+
+# Frontend
+frontend/dist/
+frontend/node_modules/
+frontend/package-lock.json
+frontend/package.json.md5
+
+# Go
+*.test
+*.out
+
+# macOS
+.DS_Store
+
+# IDE / editor
+.cursor/
+.idea/
+*.code-workspace
+
+# Claude Code session data
+.claude/
