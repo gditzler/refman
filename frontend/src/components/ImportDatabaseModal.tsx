@@ -36,7 +36,7 @@ export function ImportDatabaseModal({
   open,
   onOpenChange,
 }: ImportDatabaseModalProps) {
-  const { fetchReferences } = useReferences();
+  const { refreshReferences } = useReferences();
   const [filePath, setFilePath] = useState("");
   const [mode, setMode] = useState<ImportMode>("merge");
   const [duplicateStrategy, setDuplicateStrategy] =
@@ -76,7 +76,7 @@ export function ImportDatabaseModal({
       toast.success(
         `Imported ${result.imported} references${result.skipped > 0 ? `, skipped ${result.skipped} duplicates` : ""}`
       );
-      fetchReferences();
+      refreshReferences();
       onOpenChange(false);
       reset();
     } catch (err) {
