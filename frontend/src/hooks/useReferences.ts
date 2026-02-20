@@ -77,6 +77,27 @@ export function useReferences() {
     }
   }, [setReferences, setLoading, setError]);
 
+  const refreshReferences = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      if (selectedFolderId) {
+        const refs = await window.go.main.App.GetReferencesByFolder(selectedFolderId);
+        setReferences(refs || []);
+      } else if (selectedTag) {
+        const refs = await window.go.main.App.GetReferencesByTag(selectedTag);
+        setReferences(refs || []);
+      } else {
+        const refs = await window.go.main.App.GetAllReferences();
+        setReferences(refs || []);
+      }
+    } catch (err) {
+      setError(parseErrorMessage(err, "Failed to fetch references"));
+    } finally {
+      setLoading(false);
+    }
+  }, [setReferences, setLoading, setError, selectedFolderId, selectedTag]);
+
   const searchReferences = useCallback(
     async (query: string) => {
       setSearchQuery(query);
@@ -344,6 +365,7 @@ export function useReferences() {
     folders,
     selectedFolderId,
     fetchReferences,
+    refreshReferences,
     searchReferences,
     createReference,
     editReference,
