@@ -7,6 +7,7 @@ import { ReferenceForm } from "@/components/ReferenceForm";
 import { ImportModal } from "@/components/ImportModal";
 import { ImportDatabaseModal } from "@/components/ImportDatabaseModal";
 import { ImportBibtexModal } from "@/components/ImportBibtexModal";
+import { OllamaSearchModal } from "@/components/OllamaSearchModal";
 import { useReferences } from "@/hooks/useReferences";
 import { toast } from "sonner";
 import type { CreateReferenceInput, OllamaSettings } from "@/lib/types";
@@ -36,6 +37,8 @@ export function Toolbar() {
   const [isImportBibtexOpen, setIsImportBibtexOpen] = useState(false);
   const [isHelpOpen, setIsHelpOpen] = useState(false);
   const [isAiSettingsOpen, setIsAiSettingsOpen] = useState(false);
+  const [isOllamaModalOpen, setIsOllamaModalOpen] = useState(false);
+  const [ollamaModalQuery, setOllamaModalQuery] = useState("");
   const [importedData, setImportedData] = useState<CreateReferenceInput | undefined>();
   const [searchValue, setSearchValue] = useState("");
   const [ollamaAvailable, setOllamaAvailable] = useState<boolean | null>(null);
@@ -319,6 +322,13 @@ export function Toolbar() {
               className="pl-9"
               value={searchValue}
               onChange={handleSearch}
+              onKeyDown={(e) => {
+                if (isAiMode && e.key === "Enter" && searchValue.trim()) {
+                  e.preventDefault();
+                  setOllamaModalQuery(searchValue.trim());
+                  setIsOllamaModalOpen(true);
+                }
+              }}
             />
           </div>
 
@@ -375,6 +385,17 @@ export function Toolbar() {
       <ImportBibtexModal
         open={isImportBibtexOpen}
         onOpenChange={setIsImportBibtexOpen}
+      />
+
+      <OllamaSearchModal
+        open={isOllamaModalOpen}
+        onOpenChange={setIsOllamaModalOpen}
+        query={ollamaModalQuery}
+        onImportSuccess={(data) => {
+          setImportedData(data);
+          setIsOllamaModalOpen(false);
+          setIsFormOpen(true);
+        }}
       />
 
       {/* Keyboard shortcuts dialog */}
