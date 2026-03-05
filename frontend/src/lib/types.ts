@@ -125,6 +125,18 @@ export function parseErrorMessage(err: unknown, fallback = "An unexpected error 
   return raw || fallback;
 }
 
+export type SearchMode = 'keyword' | 'ai';
+
+export interface OllamaSettings {
+  baseURL: string;
+  model: string;
+}
+
+export const DEFAULT_OLLAMA_SETTINGS: OllamaSettings = {
+  baseURL: 'http://localhost:11434',
+  model: 'qwen:1.8b-chat-q4_0',
+};
+
 export const ENTRY_TYPES = [
   { value: "article", label: "Article" },
   { value: "book", label: "Book" },

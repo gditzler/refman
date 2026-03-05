@@ -1,5 +1,6 @@
 import { create } from "zustand";
-import type { Reference, Tag, Folder } from "@/lib/types";
+import type { Reference, Tag, Folder, SearchMode, OllamaSettings } from "@/lib/types";
+import { DEFAULT_OLLAMA_SETTINGS } from "@/lib/types";
 
 interface ReferenceState {
   references: Reference[];
@@ -29,6 +30,10 @@ interface ReferenceState {
   setSelectedTag: (tag: string | null) => void;
   setFolders: (folders: Folder[]) => void;
   setSelectedFolderId: (folderId: string | null) => void;
+  searchMode: SearchMode;
+  ollamaSettings: OllamaSettings;
+  setSearchMode: (mode: SearchMode) => void;
+  setOllamaSettings: (settings: OllamaSettings) => void;
 }
 
 export const useReferenceStore = create<ReferenceState>((set, get) => ({
@@ -85,4 +90,18 @@ export const useReferenceStore = create<ReferenceState>((set, get) => ({
   setSelectedTag: (tag) => set({ selectedTag: tag }),
   setFolders: (folders) => set({ folders }),
   setSelectedFolderId: (folderId) => set({ selectedFolderId: folderId }),
+  searchMode: 'keyword',
+  ollamaSettings: (() => {
+    try {
+      const stored = localStorage.getItem('ollama-settings');
+      return stored ? JSON.parse(stored) : DEFAULT_OLLAMA_SETTINGS;
+    } catch {
+      return DEFAULT_OLLAMA_SETTINGS;
+    }
+  })(),
+  setSearchMode: (mode) => set({ searchMode: mode }),
+  setOllamaSettings: (settings) => {
+    localStorage.setItem('ollama-settings', JSON.stringify(settings));
+    set({ ollamaSettings: settings });
+  },
 }));

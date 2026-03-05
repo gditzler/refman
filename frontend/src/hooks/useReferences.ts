@@ -2,7 +2,7 @@ import { useCallback, useRef } from "react";
 import { useReferenceStore } from "@/store/referenceStore";
 import { toast } from "sonner";
 import { parseErrorMessage } from "@/lib/types";
-import type { CreateReferenceInput, UpdateReferenceInput, Reference } from "@/lib/types";
+import type { CreateReferenceInput, UpdateReferenceInput, Reference, OllamaSettings } from "@/lib/types";
 
 declare global {
   interface Window {
@@ -27,6 +27,9 @@ declare global {
           DeleteFolder: (id: string) => Promise<void>;
           GetReferencesByFolder: (folderID: string) => Promise<any[]>;
           AddReferencesToFolder: (refIDs: string[], folderID: string) => Promise<void>;
+          OllamaSearchReferences: (query: string, model: string, baseURL: string) => Promise<any[]>;
+          CheckOllamaStatus: (baseURL: string) => Promise<boolean>;
+          InvalidateEmbedding: (refID: string) => Promise<void>;
         };
       };
     };
@@ -44,6 +47,8 @@ export function useReferences() {
     selectedTag,
     folders,
     selectedFolderId,
+    searchMode,
+    ollamaSettings,
     setReferences,
     addReference,
     updateReference,
@@ -59,6 +64,8 @@ export function useReferences() {
     setSelectedTag,
     setFolders,
     setSelectedFolderId,
+    setSearchMode,
+    setOllamaSettings,
   } = useReferenceStore();
 
   // Map of pending deletes: id → { ref snapshot, timeout handle }
@@ -114,6 +121,35 @@ export function useReferences() {
     },
     [setReferences, setSearchQuery, setLoading, setError]
   );
+
+  const ollamaSearchReferences = useCallback(
+    async (query: string, settings: OllamaSettings) => {
+      setSearchQuery(query);
+      setLoading(true);
+      setError(null);
+      try {
+        const refs = await window.go.main.App.OllamaSearchReferences(
+          query,
+          settings.model,
+          settings.baseURL
+        );
+        setReferences(refs || []);
+      } catch (err) {
+        setError(parseErrorMessage(err, "AI search failed"));
+      } finally {
+        setLoading(false);
+      }
+    },
+    [setReferences, setSearchQuery, setLoading, setError]
+  );
+
+  const checkOllamaStatus = useCallback(async (baseURL: string): Promise<boolean> => {
+    try {
+      return await window.go.main.App.CheckOllamaStatus(baseURL);
+    } catch {
+      return false;
+    }
+  }, []);
 
   const createReference = useCallback(
     async (input: CreateReferenceInput) => {
@@ -387,5 +423,11 @@ export function useReferences() {
     deleteFolder,
     filterByFolder,
     addReferencesToFolder,
+    ollamaSearchReferences,
+    checkOllamaStatus,
+    searchMode,
+    ollamaSettings,
+    setSearchMode,
+    setOllamaSettings,
   };
 }
