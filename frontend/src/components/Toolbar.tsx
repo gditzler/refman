@@ -45,7 +45,7 @@ export function Toolbar() {
   const searchInputRef = useRef<HTMLInputElement>(null);
   const {
     searchReferences,
-    ollamaSearchReferences,
+    ollamaWebSearch,
     checkOllamaStatus,
     refreshReferences,
     exportAllToBibtex,
@@ -76,12 +76,12 @@ export function Toolbar() {
       if (value.trim() === "") {
         refreshReferences();
       } else if (searchMode === 'ai') {
-        ollamaSearchReferences(value, ollamaSettings);
+        // AI search triggers on Enter, not debounce — do nothing here
       } else {
         searchReferences(value);
       }
     }, 300);
-  }, [refreshReferences, searchReferences, ollamaSearchReferences, searchMode, ollamaSettings]);
+  }, [refreshReferences, searchReferences, searchMode]);
 
   const handleModeToggle = useCallback(() => {
     const next = searchMode === 'keyword' ? 'ai' : 'keyword';

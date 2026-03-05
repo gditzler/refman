@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"sort"
 
 	"antonelli/app/database"
 	"antonelli/app/export"
@@ -83,13 +82,7 @@ func (a *App) UpdateReference(input models.UpdateReferenceInput) (*models.Refere
 	if err := a.ready(); err != nil {
 		return nil, err
 	}
-	ref, err := a.service.Update(input)
-	if err != nil {
-		return nil, err
-	}
-	// Invalidate cached embedding — the content may have changed.
-	_ = a.repo.DeleteEmbedding(input.ID)
-	return ref, nil
+	return a.service.Update(input)
 }
 
 func (a *App) DeleteReference(id string) error {
@@ -336,90 +329,3 @@ func (a *App) CheckOllamaStatus(baseURL string) bool {
 	return ollama.NewClient(baseURL).IsAvailable()
 }
 
-type scoredRef struct {
-	ref   models.Reference
-	score float64
-}
-
-// OllamaSearchReferences performs semantic search using Ollama embeddings.
-// It computes/caches embeddings for all references and returns the top matches
-// for the query, sorted by cosine similarity (highest first).
-func (a *App) OllamaSearchReferences(query, model, baseURL string) ([]models.Reference, error) {
-	if err := a.ready(); err != nil {
-		return nil, err
-	}
-
-	allRefs, err := a.repo.GetAll()
-	if err != nil {
-		return nil, fmt.Errorf("get references: %w", err)
-	}
-	if len(allRefs) == 0 {
-		return []models.Reference{}, nil
-	}
-
-	client := ollama.NewClient(baseURL)
-
-	// Ensure embeddings exist for all references (lazy generation + caching).
-	for _, ref := range allRefs {
-		stored, err := a.repo.GetEmbedding(ref.ID)
-		if err != nil {
-			return nil, fmt.Errorf("get embedding for %s: %w", ref.ID, err)
-		}
-		// Re-embed if missing or model changed.
-		if stored == nil || stored.Model != model {
-			text := ollama.ReferenceText(ref.Title, ref.Authors, ref.Abstract, ref.Keywords, ref.Notes)
-			emb, err := client.GetEmbedding(model, text)
-			if err != nil {
-				// Skip references we can't embed rather than aborting the whole search.
-				continue
-			}
-			if err := a.repo.UpsertEmbedding(ref.ID, model, emb); err != nil {
-				return nil, fmt.Errorf("store embedding for %s: %w", ref.ID, err)
-			}
-		}
-	}
-
-	// Embed the query.
-	queryEmb, err := client.GetEmbedding(model, query)
-	if err != nil {
-		return nil, fmt.Errorf("embed query: %w", err)
-	}
-
-	// Load all stored embeddings and compute scores.
-	stored, err := a.repo.GetAllEmbeddings()
-	if err != nil {
-		return nil, fmt.Errorf("load embeddings: %w", err)
-	}
-
-	var scored []scoredRef
-	for _, ref := range allRefs {
-		emb, ok := stored[ref.ID]
-		if !ok {
-			continue
-		}
-		score := ollama.CosineSimilarity(queryEmb, emb.Embedding)
-		if score > 0.1 { // threshold: ignore very dissimilar results
-			scored = append(scored, scoredRef{ref: ref, score: score})
-		}
-	}
-
-	// Sort by score descending.
-	sort.Slice(scored, func(i, j int) bool {
-		return scored[i].score > scored[j].score
-	})
-
-	result := make([]models.Reference, len(scored))
-	for i, s := range scored {
-		result[i] = s.ref
-	}
-	return result, nil
-}
-
-// InvalidateEmbedding removes the cached embedding for a reference.
-// Call this when a reference's content fields are updated.
-func (a *App) InvalidateEmbedding(refID string) error {
-	if err := a.ready(); err != nil {
-		return err
-	}
-	return a.repo.DeleteEmbedding(refID)
-}

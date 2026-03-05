@@ -27,9 +27,8 @@ declare global {
           DeleteFolder: (id: string) => Promise<void>;
           GetReferencesByFolder: (folderID: string) => Promise<any[]>;
           AddReferencesToFolder: (refIDs: string[], folderID: string) => Promise<void>;
-          OllamaSearchReferences: (query: string, model: string, baseURL: string) => Promise<any[]>;
+          OllamaWebSearch: (query: string, model: string, baseURL: string) => Promise<void>;
           CheckOllamaStatus: (baseURL: string) => Promise<boolean>;
-          InvalidateEmbedding: (refID: string) => Promise<void>;
         };
       };
     };
@@ -122,25 +121,11 @@ export function useReferences() {
     [setReferences, setSearchQuery, setLoading, setError]
   );
 
-  const ollamaSearchReferences = useCallback(
+  const ollamaWebSearch = useCallback(
     async (query: string, settings: OllamaSettings) => {
-      setSearchQuery(query);
-      setLoading(true);
-      setError(null);
-      try {
-        const refs = await window.go.main.App.OllamaSearchReferences(
-          query,
-          settings.model,
-          settings.baseURL
-        );
-        setReferences(refs || []);
-      } catch (err) {
-        setError(parseErrorMessage(err, "AI search failed"));
-      } finally {
-        setLoading(false);
-      }
+      await window.go.main.App.OllamaWebSearch(query, settings.model, settings.baseURL);
     },
-    [setReferences, setSearchQuery, setLoading, setError]
+    []
   );
 
   const checkOllamaStatus = useCallback(async (baseURL: string): Promise<boolean> => {
@@ -423,7 +408,7 @@ export function useReferences() {
     deleteFolder,
     filterByFolder,
     addReferencesToFolder,
-    ollamaSearchReferences,
+    ollamaWebSearch,
     checkOllamaStatus,
     searchMode,
     ollamaSettings,
