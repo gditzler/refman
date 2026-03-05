@@ -142,6 +142,13 @@ func (db *DB) migrate() error {
 		`CREATE INDEX IF NOT EXISTS idx_reference_links_ref ON reference_links(reference_id)`,
 		// schema_flags: tracks one-time migrations (avoids re-running expensive ops on startup)
 		`CREATE TABLE IF NOT EXISTS schema_flags (key TEXT PRIMARY KEY, value TEXT)`,
+		`CREATE TABLE IF NOT EXISTS ref_embeddings (
+    ref_id TEXT PRIMARY KEY,
+    model TEXT NOT NULL,
+    embedding TEXT NOT NULL,
+    embedded_at DATETIME NOT NULL,
+    FOREIGN KEY (ref_id) REFERENCES refs(id) ON DELETE CASCADE
+)`,
 	}
 
 	for _, m := range required {
