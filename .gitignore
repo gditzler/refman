@@ -1,7 +1,5 @@
 # Wails build output
-build/bin/
-build/darwin/
-build/windows/
+build/
 
 # Frontend
 frontend/dist/
@@ -12,6 +10,7 @@ frontend/package.json.md5
 # Go
 *.test
 *.out
+antonelli
 
 # macOS
 .DS_Store
@@ -20,6 +19,9 @@ frontend/package.json.md5
 .cursor/
 .idea/
 *.code-workspace
+
+# Documentation
+docs/
 
 # Claude Code session data
 .claude/
