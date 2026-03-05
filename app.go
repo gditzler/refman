@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 
 	"antonelli/app/database"
 	"antonelli/app/export"
@@ -327,5 +328,62 @@ func (a *App) ImportBibtexFile(filePath string, duplicateStrategy string) (*impo
 // CheckOllamaStatus reports whether an Ollama instance is reachable at baseURL.
 func (a *App) CheckOllamaStatus(baseURL string) bool {
 	return ollama.NewClient(baseURL).IsAvailable()
+}
+
+const crossRefBaseURL = "https://api.crossref.org"
+
+// OllamaWebSearch fetches real papers from CrossRef, then streams an Ollama
+// summary into the frontend via Wails events. All outcomes are communicated
+// through events so the frontend doesn't need to handle Promise rejections.
+//
+// Events emitted:
+//   - "ollama:chunk" (string)         — one token from the streaming response
+//   - "ollama:refs"  ([]CrossRefPaper) — the CrossRef papers (sent after stream ends)
+//   - "ollama:error" (string)         — human-readable error message
+func (a *App) OllamaWebSearch(query, model, baseURL string) {
+	papers, err := ollama.SearchCrossRef(crossRefBaseURL, query, 8)
+	if err != nil {
+		runtime.EventsEmit(a.ctx, "ollama:error", "CrossRef search failed: "+err.Error())
+		return
+	}
+	if len(papers) == 0 {
+		runtime.EventsEmit(a.ctx, "ollama:error", "No papers found for this query.")
+		return
+	}
+
+	prompt := buildOllamaPrompt(query, papers)
+	client := ollama.NewClient(baseURL)
+
+	streamErr := client.StreamGenerate(context.Background(), model, prompt, func(chunk string) {
+		runtime.EventsEmit(a.ctx, "ollama:chunk", chunk)
+	})
+	if streamErr != nil {
+		runtime.EventsEmit(a.ctx, "ollama:error", "Ollama stream error: "+streamErr.Error())
+	}
+
+	// Emit papers regardless of stream outcome — they came from CrossRef and are real.
+	runtime.EventsEmit(a.ctx, "ollama:refs", papers)
+}
+
+func buildOllamaPrompt(query string, papers []ollama.CrossRefPaper) string {
+	var sb strings.Builder
+	sb.WriteString("You are a research assistant. The user asked: \"")
+	sb.WriteString(query)
+	sb.WriteString("\".\n\n")
+	sb.WriteString("Below are papers from the literature related to this topic.\n")
+	sb.WriteString("Write a concise summary of what these papers cover and how they\n")
+	sb.WriteString("relate to the user's query. Reference papers by their number [1], [2], etc.\n\n")
+	for i, p := range papers {
+		sb.WriteString(fmt.Sprintf("[%d] Title: %s\n", i+1, p.Title))
+		sb.WriteString(fmt.Sprintf("    Authors: %s (%d)\n", p.Authors, p.Year))
+		if p.Venue != "" {
+			sb.WriteString(fmt.Sprintf("    Published in: %s\n", p.Venue))
+		}
+		if p.DOI != "" {
+			sb.WriteString(fmt.Sprintf("    DOI: %s\n", p.DOI))
+		}
+		sb.WriteString("\n")
+	}
+	return sb.String()
 }
 
