@@ -137,6 +137,14 @@ export const DEFAULT_OLLAMA_SETTINGS: OllamaSettings = {
   model: 'qwen:1.8b-chat-q4_0',
 };
 
+export interface CrossRefPaper {
+  title: string;
+  authors: string;
+  year: number;
+  venue: string;
+  doi: string;
+}
+
 export const ENTRY_TYPES = [
   { value: "article", label: "Article" },
   { value: "book", label: "Book" },
