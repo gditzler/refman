@@ -2,6 +2,7 @@ package ollama
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -58,6 +59,59 @@ func (c *Client) GetEmbedding(model, text string) ([]float64, error) {
 		return nil, fmt.Errorf("ollama: empty embedding in response")
 	}
 	return result.Embeddings[0], nil
+}
+
+type generateRequest struct {
+	Model  string `json:"model"`
+	Prompt string `json:"prompt"`
+	Stream bool   `json:"stream"`
+}
+
+type generateChunk struct {
+	Response string `json:"response"`
+	Done     bool   `json:"done"`
+}
+
+// StreamGenerate calls Ollama's /api/generate endpoint with streaming enabled.
+// It calls onChunk for each token received and returns when the stream is done.
+// Cancel ctx to abort mid-stream (e.g. when the user closes the modal).
+func (c *Client) StreamGenerate(ctx context.Context, model, prompt string, onChunk func(string)) error {
+	body, err := json.Marshal(generateRequest{Model: model, Prompt: prompt, Stream: true})
+	if err != nil {
+		return fmt.Errorf("ollama: marshal generate request: %w", err)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+"/api/generate", bytes.NewReader(body))
+	if err != nil {
+		return fmt.Errorf("ollama: build request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	// Use a client without a hard response timeout — streaming can take minutes.
+	streamClient := &http.Client{}
+	resp, err := streamClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("ollama: generate request failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("ollama: generate returned HTTP %d", resp.StatusCode)
+	}
+
+	decoder := json.NewDecoder(resp.Body)
+	for {
+		var chunk generateChunk
+		if err := decoder.Decode(&chunk); err != nil {
+			return fmt.Errorf("ollama: decode chunk: %w", err)
+		}
+		if chunk.Response != "" {
+			onChunk(chunk.Response)
+		}
+		if chunk.Done {
+			return nil
+		}
+	}
 }
 
 // IsAvailable reports whether Ollama is reachable at the configured base URL.
